@@ -7,34 +7,48 @@ import (
 
 // Pool aardwolf goruntine pool
 type Pool struct {
-	Cap      uint64
-	Running  int64
 	Alloc    time.Duration
 	Func     func(interface{})
 	Recovery func(interface{})
 
-	FreeWorkers []Worker
-	WorkPool    *sync.Pool
+	capNum      int64
+	runningNum  int64
+	luckCounter sync.Mutex
+	idleWorkers []*Worker
+	luckWorkers sync.Mutex
 }
 
 // New new pool
-func New(cap uint64, alloc time.Duration, f, r func(interface{})) *Pool {
-	p := &Pool{
-		Cap:      cap,
+func New(capNum int64, alloc time.Duration, r, f func(interface{})) *Pool {
+	return &Pool{
+		capNum:   capNum,
 		Alloc:    alloc,
 		Func:     f,
 		Recovery: r,
 	}
-	p.WorkPool = &sync.Pool{
-		New: newPool(p),
-	}
-	return p
 }
 
-func newPool(p *Pool) func() interface{} {
-	return func() interface{} {
-		return &Worker{
+// Push 向池中添加任务
+func (p *Pool) Push(x interface{}) error {
+	p.luckCounter.Lock()
+	defer p.luckCounter.Unlock()
+	if p.capNum <= p.runningNum {
+		return ErrNoFreeWorker
+	}
+	// 取空闲 Worker
+	var w *Worker
+	p.luckWorkers.Lock()
+	if len(p.idleWorkers) > 0 {
+		w = p.idleWorkers[len(p.idleWorkers)-1]
+		p.idleWorkers = p.idleWorkers[:len(p.idleWorkers)-1]
+	} else {
+		w = &Worker{
 			pool: p,
 		}
 	}
+	p.luckWorkers.Unlock()
+	w.start()
+	p.runningNum++
+	w.args <- x
+	return nil
 }
