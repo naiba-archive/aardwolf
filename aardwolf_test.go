@@ -47,7 +47,10 @@ func TestHasRecover(t *testing.T) {
 		t.Log("recover", e)
 	})
 	for i := 0; i < 10; i++ {
-		p.Push(fmt.Sprintf("bingo-recover-%d", i))
+		t.Log(p, p.Push(fmt.Sprintf("bingo-recover-%d", i)))
+		if i == 6 {
+			p.Release()
+		}
 	}
 }
 

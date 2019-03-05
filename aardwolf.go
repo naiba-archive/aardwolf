@@ -31,6 +31,22 @@ func New(size uint64, wr time.Duration, f, r func(interface{})) *Pool {
 	return p
 }
 
+// Release pool
+func (p *Pool) Release() {
+	p.lockCounter.Lock()
+	p.capNum = 0
+	p.workerNum = 0
+	p.lockCounter.Unlock()
+	p.lockWorkers.Lock()
+	for i := 0; i < len(p.idleWorkers); i++ {
+		p.idleWorkers[i].release()
+	}
+	p.idleWorkers = nil
+	p.lockWorkers.Unlock()
+	p.Recover = nil
+	p.Func = nil
+}
+
 // Push 向池中添加任务
 func (p *Pool) Push(x interface{}) error {
 	// 取空闲 Worker

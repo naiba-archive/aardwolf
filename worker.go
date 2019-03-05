@@ -48,7 +48,6 @@ func (w *Worker) release() {
 	atomic.AddUint64(&w.pool.workerNum, ^uint64(1-1))
 	close(w.args)
 	w.args = nil
-	w = nil
 }
 
 func (w *Worker) free() {
