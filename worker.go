@@ -3,12 +3,14 @@ package aardwolf
 import (
 	"log"
 	"sync/atomic"
+	"time"
 )
 
 // Worker worker
 type Worker struct {
-	pool *Pool
-	args chan interface{}
+	pool     *Pool
+	args     chan interface{}
+	lastWork time.Time
 }
 
 func (w *Worker) start() {
@@ -26,6 +28,7 @@ func (w *Worker) start() {
 				}
 			}()
 			atomic.AddUint64(&w.pool.runningNum, 1)
+			w.lastWork = time.Now()
 			if w.pool.Func != nil {
 				w.pool.Func(arg)
 			} else {
@@ -50,7 +53,7 @@ func (w *Worker) release() {
 
 func (w *Worker) free() {
 	atomic.AddUint64(&w.pool.runningNum, ^uint64(1-1))
-	w.pool.luckWorkers.Lock()
+	w.pool.lockWorkers.Lock()
 	w.pool.idleWorkers = append(w.pool.idleWorkers, w)
-	w.pool.luckWorkers.Unlock()
+	w.pool.lockWorkers.Unlock()
 }

@@ -32,7 +32,7 @@ func demoPoolFunc(args interface{}) {
 }
 
 func TestNoneRecover(t *testing.T) {
-	p := New(2, func(i interface{}) {
+	p := New(2, time.Second, func(i interface{}) {
 		panic(i)
 	}, nil)
 	for i := 0; i < 10; i++ {
@@ -41,7 +41,7 @@ func TestNoneRecover(t *testing.T) {
 }
 
 func TestHasRecover(t *testing.T) {
-	p := New(2, func(i interface{}) {
+	p := New(2, time.Second, func(i interface{}) {
 		panic(i)
 	}, func(e interface{}) {
 		t.Log("recover", e)
@@ -52,7 +52,7 @@ func TestHasRecover(t *testing.T) {
 }
 
 func BenchmarkSingleFunc(b *testing.B) {
-	p := New(poolSize, demoPoolFunc, nil)
+	p := New(poolSize, time.Second, demoPoolFunc, nil)
 
 	b.StartTimer()
 	for j := 0; j < b.N; j++ {
