@@ -14,6 +14,17 @@ type Worker struct {
 func (w *Worker) start() {
 	go func() {
 		for arg := range w.args {
+			// panic handler
+			defer func() {
+				if r := recover(); r != nil {
+					if w.pool.Recover != nil {
+						w.pool.Recover(r)
+					} else {
+						log.Println("Aardwolf: panic", r)
+					}
+					w.release()
+				}
+			}()
 			atomic.AddUint64(&w.pool.runningNum, 1)
 			if w.pool.Func != nil {
 				w.pool.Func(arg)
@@ -25,10 +36,21 @@ func (w *Worker) start() {
 					log.Println("Aardwolf:", "work is invalid")
 				}
 			}
-			atomic.AddUint64(&w.pool.runningNum, ^uint64(1-1))
-			w.pool.luckWorkers.Lock()
-			w.pool.idleWorkers = append(w.pool.idleWorkers, w)
-			w.pool.luckWorkers.Unlock()
+			w.free()
 		}
 	}()
+}
+
+func (w *Worker) release() {
+	atomic.AddUint64(&w.pool.workerNum, ^uint64(1-1))
+	close(w.args)
+	w.args = nil
+	w = nil
+}
+
+func (w *Worker) free() {
+	atomic.AddUint64(&w.pool.runningNum, ^uint64(1-1))
+	w.pool.luckWorkers.Lock()
+	w.pool.idleWorkers = append(w.pool.idleWorkers, w)
+	w.pool.luckWorkers.Unlock()
 }

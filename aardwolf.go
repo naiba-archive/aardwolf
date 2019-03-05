@@ -6,7 +6,8 @@ import (
 
 // Pool aardwolf goruntine pool
 type Pool struct {
-	Func func(interface{})
+	Func    func(interface{})
+	Recover func(interface{})
 
 	capNum      uint64
 	workerNum   uint64
@@ -17,16 +18,16 @@ type Pool struct {
 }
 
 // New new pool
-func New(capNum uint64, f func(interface{})) *Pool {
+func New(capNum uint64, f, r func(interface{})) *Pool {
 	return &Pool{
-		capNum: capNum,
-		Func:   f,
+		capNum:  capNum,
+		Func:    f,
+		Recover: r,
 	}
 }
 
 // Push 向池中添加任务
 func (p *Pool) Push(x interface{}) error {
-
 	// 取空闲 Worker
 	var w *Worker
 	p.luckCounter.Lock()

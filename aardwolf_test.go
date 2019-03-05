@@ -1,6 +1,7 @@
 package aardwolf
 
 import (
+	"fmt"
 	"runtime"
 	"testing"
 	"time"
@@ -19,8 +20,8 @@ const (
 )
 
 const (
-	poolSize = 200000
-	testTime = 1000000
+	poolSize uint64 = 200000
+	testTime        = 1000000
 )
 
 var curMem uint64
@@ -30,8 +31,28 @@ func demoPoolFunc(args interface{}) {
 	time.Sleep(time.Duration(n) * time.Millisecond)
 }
 
-func BenchmarkAardwolf(b *testing.B) {
-	p := New(poolSize, demoPoolFunc)
+func TestNoneRecover(t *testing.T) {
+	p := New(2, func(i interface{}) {
+		panic(i)
+	}, nil)
+	for i := 0; i < 10; i++ {
+		p.Push(fmt.Sprintf("bingo-no_recover-%d", i))
+	}
+}
+
+func TestHasRecover(t *testing.T) {
+	p := New(2, func(i interface{}) {
+		panic(i)
+	}, func(e interface{}) {
+		t.Log("recover", e)
+	})
+	for i := 0; i < 10; i++ {
+		p.Push(fmt.Sprintf("bingo-recover-%d", i))
+	}
+}
+
+func BenchmarkSingleFunc(b *testing.B) {
+	p := New(poolSize, demoPoolFunc, nil)
 
 	b.StartTimer()
 	for j := 0; j < b.N; j++ {
