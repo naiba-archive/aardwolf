@@ -41,7 +41,7 @@ func TestNoneRecover(t *testing.T) {
 }
 
 func TestHasRecover(t *testing.T) {
-	p := New(2, time.Second, func(i interface{}) {
+	p := New(2, time.Minute, func(i interface{}) {
 		panic(i)
 	}, func(e interface{}) {
 		t.Log("recover", e)
@@ -55,12 +55,32 @@ func TestHasRecover(t *testing.T) {
 }
 
 func BenchmarkSingleFunc(b *testing.B) {
-	p := New(poolSize, time.Second, demoPoolFunc, nil)
+	p := New(poolSize, time.Minute, demoPoolFunc, nil)
 
 	b.StartTimer()
 	for j := 0; j < b.N; j++ {
 		for i := 0; i < testTime; i++ {
 			p.Push(10)
+		}
+	}
+	b.StopTimer()
+
+	mem := runtime.MemStats{}
+	runtime.ReadMemStats(&mem)
+	tmpMem := (mem.TotalAlloc - curMem) / mb
+	curMem = mem.TotalAlloc
+	b.Logf("memory usage:%d MB", tmpMem)
+}
+
+func BenchmarkMultiFunc(b *testing.B) {
+	p := New(poolSize, time.Minute, nil, nil)
+
+	b.StartTimer()
+	for j := 0; j < b.N; j++ {
+		for i := 0; i < testTime; i++ {
+			p.Push(func() {
+				demoPoolFunc(10)
+			})
 		}
 	}
 	b.StopTimer()
