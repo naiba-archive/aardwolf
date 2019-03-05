@@ -11,13 +11,11 @@ type Pool struct {
 	Recover func(interface{})
 	Recycle time.Duration
 
-	capNum uint64
+	capNum      uint64
+	workerNum   uint64
+	countLocker sync.Mutex
 
-	workerNum  uint64
-	workerNumL sync.Mutex
-
-	runningNum  uint64
-	runningNumL sync.Mutex
+	runningNum uint64
 
 	idleWorkers []*Worker
 	lockWorkers sync.Mutex
@@ -37,13 +35,13 @@ func New(size uint64, wr time.Duration, f, r func(interface{})) *Pool {
 
 // Release pool
 func (p *Pool) Release() {
-	p.workerNumL.Lock()
+	p.countLocker.Lock()
 	p.capNum = 0
 	p.workerNum = 0
-	p.workerNumL.Unlock()
+	p.countLocker.Unlock()
 	p.lockWorkers.Lock()
 	for i := 0; i < len(p.idleWorkers); i++ {
-		p.idleWorkers[i].release()
+		p.idleWorkers[i].release(false)
 	}
 	p.idleWorkers = nil
 	p.lockWorkers.Unlock()
@@ -53,11 +51,10 @@ func (p *Pool) Release() {
 
 // Push work to pool
 func (p *Pool) Push(x interface{}) error {
+	p.countLocker.Lock()
+	p.lockWorkers.Lock()
 	// 取空闲 Worker
 	var w *Worker
-	p.workerNumL.Lock()
-	defer p.workerNumL.Unlock()
-	p.lockWorkers.Lock()
 	if len(p.idleWorkers) > 0 {
 		w = p.idleWorkers[len(p.idleWorkers)-1]
 		p.idleWorkers = p.idleWorkers[:len(p.idleWorkers)-1]
@@ -70,9 +67,11 @@ func (p *Pool) Push(x interface{}) error {
 		w.start()
 	} else {
 		p.lockWorkers.Unlock()
+		p.countLocker.Unlock()
 		return ErrNoFreeWorker
 	}
 	p.lockWorkers.Unlock()
+	p.countLocker.Unlock()
 	w.args <- x
 	return nil
 }
@@ -86,7 +85,7 @@ func (p *Pool) recycling() {
 				p.lockWorkers.Lock()
 				for i := 0; i < len(p.idleWorkers); i++ {
 					if p.idleWorkers[i].lastWork.Add(p.Recycle).Before(time.Now()) {
-						p.idleWorkers[i].release()
+						p.idleWorkers[i].release(true)
 						p.idleWorkers = append(p.idleWorkers[:i], p.idleWorkers[i+1:]...)
 					}
 				}

@@ -36,12 +36,12 @@ func TestNoneRecover(t *testing.T) {
 		panic(i)
 	}, nil)
 	for i := 0; i < 10; i++ {
-		p.Push(fmt.Sprintf("bingo-no_recover-%d", i))
+		t.Log(p.Push(fmt.Sprintf("bingo-no_recover-%d", i)))
 	}
 }
 
 func TestHasRecover(t *testing.T) {
-	p := New(2, time.Minute, func(i interface{}) {
+	p := New(5, time.Minute, func(i interface{}) {
 		panic(i)
 	}, func(e interface{}) {
 		t.Log("recover", e)
