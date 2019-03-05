@@ -2,7 +2,6 @@ package aardwolf
 
 import (
 	"log"
-	"sync/atomic"
 	"time"
 )
 
@@ -27,7 +26,11 @@ func (w *Worker) start() {
 					w.release()
 				}
 			}()
-			atomic.AddUint64(&w.pool.runningNum, 1)
+
+			w.pool.runningNumL.Lock()
+			w.pool.runningNum++
+			w.pool.runningNumL.Unlock()
+
 			w.lastWork = time.Now()
 			if w.pool.Func != nil {
 				w.pool.Func(arg)
@@ -45,14 +48,23 @@ func (w *Worker) start() {
 }
 
 func (w *Worker) release() {
-	atomic.AddUint64(&w.pool.workerNum, ^uint64(1-1))
+	w.pool.workerNumL.Lock()
+	defer w.pool.workerNumL.Unlock()
+	if w.pool.workerNum > 1 {
+		w.pool.workerNum--
+	}
 	close(w.args)
 	w.args = nil
 }
 
 func (w *Worker) free() {
-	atomic.AddUint64(&w.pool.runningNum, ^uint64(1-1))
+	w.pool.runningNumL.Lock()
+	defer w.pool.runningNumL.Unlock()
+	if w.pool.runningNum > 1 {
+		w.pool.runningNum--
+	}
+
 	w.pool.lockWorkers.Lock()
+	defer w.pool.lockWorkers.Unlock()
 	w.pool.idleWorkers = append(w.pool.idleWorkers, w)
-	w.pool.lockWorkers.Unlock()
 }

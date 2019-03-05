@@ -11,15 +11,19 @@ type Pool struct {
 	Recover func(interface{})
 	Recycle time.Duration
 
-	capNum      uint64
-	workerNum   uint64
+	capNum uint64
+
+	workerNum  uint64
+	workerNumL sync.Mutex
+
 	runningNum  uint64
+	runningNumL sync.Mutex
+
 	idleWorkers []*Worker
-	lockCounter sync.Mutex
 	lockWorkers sync.Mutex
 }
 
-// New new pool
+// New Create a new pool
 func New(size uint64, wr time.Duration, f, r func(interface{})) *Pool {
 	p := &Pool{
 		capNum:  size,
@@ -33,10 +37,10 @@ func New(size uint64, wr time.Duration, f, r func(interface{})) *Pool {
 
 // Release pool
 func (p *Pool) Release() {
-	p.lockCounter.Lock()
+	p.workerNumL.Lock()
 	p.capNum = 0
 	p.workerNum = 0
-	p.lockCounter.Unlock()
+	p.workerNumL.Unlock()
 	p.lockWorkers.Lock()
 	for i := 0; i < len(p.idleWorkers); i++ {
 		p.idleWorkers[i].release()
@@ -47,12 +51,12 @@ func (p *Pool) Release() {
 	p.Func = nil
 }
 
-// Push 向池中添加任务
+// Push work to pool
 func (p *Pool) Push(x interface{}) error {
 	// 取空闲 Worker
 	var w *Worker
-	p.lockCounter.Lock()
-	defer p.lockCounter.Unlock()
+	p.workerNumL.Lock()
+	defer p.workerNumL.Unlock()
 	p.lockWorkers.Lock()
 	if len(p.idleWorkers) > 0 {
 		w = p.idleWorkers[len(p.idleWorkers)-1]
