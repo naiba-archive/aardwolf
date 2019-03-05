@@ -5,4 +5,5 @@ before_install:
   - go get golang.org/x/lint/golint
 script:
   - go list ./... | xargs -L1 golint
-  - go test -v -race -cover ./...
+  - go test -v -race ./...
+  - go test -v -cover -bench=. -benchmem
