@@ -58,5 +58,7 @@ func (w *Worker) free() {
 	atomic.AddUint64(&w.pool.runningNum, ^uint64(1))
 	w.pool.lockWorkers.Lock()
 	defer w.pool.lockWorkers.Unlock()
-	w.pool.idleWorkers = append(w.pool.idleWorkers, w)
+	if w.pool.idleWorkers != nil {
+		w.pool.idleWorkers = append(w.pool.idleWorkers, w)
+	}
 }
