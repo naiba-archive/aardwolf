@@ -11,13 +11,13 @@
 goos: darwin
 goarch: amd64
 pkg: github.com/naiba/aardwolf
-BenchmarkSingleFunc-4   	       1	1292621237 ns/op	79728136 B/op	 1101245 allocs/op
+BenchmarkSingleFunc-4   	       1	1335181825 ns/op	80490664 B/op	 1109447 allocs/op
 --- BENCH: BenchmarkSingleFunc-4
     aardwolf_test.go:72: memory usage:76 MB
-BenchmarkMultiFunc-4    	       1	1348455223 ns/op	79673160 B/op	 1099530 allocs/op
+BenchmarkMultiFunc-4    	       1	1493482161 ns/op	78909176 B/op	 1100540 allocs/op
 --- BENCH: BenchmarkMultiFunc-4
-    aardwolf_test.go:92: memory usage:76 MB
+    aardwolf_test.go:92: memory usage:75 MB
 PASS
-coverage: 92.2% of statements
-ok  	github.com/naiba/aardwolf	2.845s
+coverage: 92.6% of statements
+ok  	github.com/naiba/aardwolf	3.019s
 ```
